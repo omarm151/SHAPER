@@ -1,0 +1,23 @@
+ILLUMINIZE SHAPER (VST3 + AU) — macOS, Apple Silicon
+
+EASIEST
+1. Right-click Install.command and choose Open (macOS asks once because the script
+   isn't from the App Store; click Open).
+2. In Ableton Live: Settings > Plug-Ins > turn on "Use VST3 Plug-In System Folders"
+   and "Use Audio Units", then Rescan.
+3. Find it in Live's browser under Plug-Ins > Illuminize > Illuminize Shaper.
+
+MANUAL
+1. Copy "Illuminize Shaper.vst3" to ~/Library/Audio/Plug-Ins/VST3/
+   Copy "Illuminize Shaper.component" to ~/Library/Audio/Plug-Ins/Components/
+2. Open Terminal and run (removes the download quarantine flag):
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"Illuminize Shaper.vst3"
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"Illuminize Shaper.component"
+3. Rescan plug-ins in Live.
+
+WHY THE EXTRA STEP
+The plugin is signed locally ("ad-hoc"), not notarized by Apple (that needs a paid
+Apple Developer account). macOS blocks downloaded unsigned plug-ins until the
+quarantine flag is removed. This is normal for free, self-built plug-ins.
+
+The Max for Live version is a separate device and is not affected by this install.
