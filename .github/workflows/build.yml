@@ -14,7 +14,7 @@ jobs:
   linux:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install build dependencies
         run: |
@@ -24,16 +24,16 @@ jobs:
             libxrandr-dev libxrender-dev libgl1-mesa-dev
 
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DILLUMINIZE_DEV_TOOLS=ON
+        run: .github/scripts/run.sh cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DILLUMINIZE_DEV_TOOLS=ON
 
       - name: Build
-        run: cmake --build build --target EngineTests IlluminizeShaper_VST3 HostCheck UiSnapshot
+        run: .github/scripts/run.sh cmake --build build --target EngineTests IlluminizeShaper_VST3 HostCheck UiSnapshot
 
       - name: Engine tests
-        run: ctest --test-dir build --output-on-failure
+        run: .github/scripts/run.sh ctest --test-dir build --output-on-failure
 
       - name: VST3 host check
-        run: ./build/HostCheck_artefacts/Release/HostCheck "build/IlluminizeShaper_artefacts/Release/VST3/Illuminize Shaper.vst3"
+        run: .github/scripts/run.sh ./build/HostCheck_artefacts/Release/HostCheck "build/IlluminizeShaper_artefacts/Release/VST3/Illuminize Shaper.vst3"
 
       - name: UI screenshots
         run: ./build/UiSnapshot_artefacts/Release/UiSnapshot screenshots
@@ -47,18 +47,18 @@ jobs:
   macos:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Configure
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 \
+          .github/scripts/run.sh cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 \
                 -DILLUMINIZE_DEV_TOOLS=ON
 
       - name: Build
-        run: cmake --build build --config Release -j 3 --target EngineTests IlluminizeShaper_VST3 IlluminizeShaper_AU HostCheck
+        run: .github/scripts/run.sh cmake --build build --config Release -j 3 --target EngineTests IlluminizeShaper_VST3 IlluminizeShaper_AU HostCheck
 
       - name: Engine tests
-        run: ctest --test-dir build -C Release --output-on-failure
+        run: .github/scripts/run.sh ctest --test-dir build -C Release --output-on-failure
 
       - name: Sign (ad-hoc) and package
         run: |
@@ -82,7 +82,7 @@ jobs:
           if-no-files-found: error
 
       - name: VST3 host check
-        run: ./build/HostCheck_artefacts/Release/HostCheck "pkg/Illuminize Shaper/Illuminize Shaper.vst3"
+        run: .github/scripts/run.sh ./build/HostCheck_artefacts/Release/HostCheck "pkg/Illuminize Shaper/Illuminize Shaper.vst3"
 
       - name: AU validation (auval)
         run: |
@@ -90,11 +90,11 @@ jobs:
           cp -R "pkg/Illuminize Shaper/Illuminize Shaper.component" ~/Library/Audio/Plug-Ins/Components/
           killall -9 AudioComponentRegistrar || true
           sleep 3
-          auval -v aufx IlSh Illu
+          .github/scripts/run.sh auval -v aufx IlSh Illu
 
       - name: pluginval (strictness 5)
         run: |
           curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_macOS.zip
           unzip -q pluginval.zip
-          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --skip-gui-tests --validate-in-process \
+          .github/scripts/run.sh ./pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --skip-gui-tests --validate-in-process \
             --validate "pkg/Illuminize Shaper/Illuminize Shaper.vst3"
