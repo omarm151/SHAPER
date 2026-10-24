@@ -24,12 +24,16 @@ void Knob::paint (juce::Graphics& g)
 {
     const auto& p = paletteFor (*this);
     const float w = (float) getWidth(), h = (float) getHeight();
+    // Text and strokes grow with the knob (13 px text at the device's 66 px height).
+    const float k = juce::jlimit (1.0f, 1.6f, h / 66.0f);
+    const float fontH = 13.0f * k, stroke = 3.0f * k;
 
     g.setColour (p.text);
-    g.setFont (Fonts::regular (13.0f));
-    g.drawText (title, juce::Rectangle<float> (0.0f, 0.0f, w, 14.0f), juce::Justification::centredTop, false);
+    g.setFont (Fonts::regular (fontH));
+    g.drawText (title, juce::Rectangle<float> (0.0f, 0.0f, w, fontH + 2.0f), juce::Justification::centredTop, false);
 
-    const float cx = w * 0.5f, cy = h * 0.53f, r = std::min (w * 0.31f, h * 0.24f);
+    const float cy = (fontH + 2.0f + h - fontH - 2.0f) * 0.5f;
+    const float cx = w * 0.5f, r = std::min (w * 0.31f, (h - 2.0f * (fontH + 6.0f)) * 0.5f);
     const auto range = getRange();
     const float frac = (float) valueToProportionOfLength (getValue());
     const float start = juce::MathConstants<float>::pi * 1.25f, end = juce::MathConstants<float>::pi * 2.75f;
@@ -39,23 +43,23 @@ void Knob::paint (juce::Graphics& g)
     juce::Path track;
     track.addCentredArc (cx, cy, r, r, 0.0f, start, end, true);
     g.setColour (p.knobTrack);
-    g.strokePath (track, juce::PathStrokeType (3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::butt));
+    g.strokePath (track, juce::PathStrokeType (stroke, juce::PathStrokeType::curved, juce::PathStrokeType::butt));
 
     if (frac > 0.0005f)
     {
         juce::Path arc;
         arc.addCentredArc (cx, cy, r, r, 0.0f, start, angle, true);
         g.setColour (p.knobArc);
-        g.strokePath (arc, juce::PathStrokeType (3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::butt));
+        g.strokePath (arc, juce::PathStrokeType (stroke, juce::PathStrokeType::curved, juce::PathStrokeType::butt));
     }
 
     const float nx = cx + std::sin (angle) * (r - 1.0f), ny = cy - std::cos (angle) * (r - 1.0f);
     g.setColour (p.knobNeedle);
-    g.drawLine (cx, cy, nx, ny, 2.2f);
+    g.drawLine (cx, cy, nx, ny, 2.2f * k);
 
     g.setColour (p.text);
-    g.setFont (Fonts::regular (13.0f));
-    g.drawText (getTextFromValue (getValue()), juce::Rectangle<float> (-6.0f, h - 15.0f, w + 12.0f, 15.0f),
+    g.setFont (Fonts::regular (fontH));
+    g.drawText (getTextFromValue (getValue()), juce::Rectangle<float> (-6.0f, h - fontH - 2.0f, w + 12.0f, fontH + 2.0f),
                 juce::Justification::centredBottom, false);
 }
 

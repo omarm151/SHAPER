@@ -3,71 +3,26 @@
 namespace illuminize
 {
 
-// ---------------------------------------------------------------- big curve window
-
-class CurveWindowContent : public juce::Component
+namespace Layout
 {
-public:
-    explicit CurveWindowContent (ShaperProcessor& p) : proc (p), curve (p)
-    {
-        addAndMakeVisible (curve);
-        addAndMakeVisible (reset);
-        reset.setTooltip ("Returns the curve and all controls to their defaults. The theme is kept.");
-        reset.onClick = [this] { proc.resetAll(); };
-        setSize (800, 500);
-    }
-    void paint (juce::Graphics& g) override
-    {
-        const auto& pal = paletteFor (*this);
-        g.fillAll (pal.surface);
-        g.setColour (pal.text);
-        g.setFont (Fonts::bold (21.0f));
-        g.drawText ("ILLUMINIZE SHAPER  /  CURVE EDITOR", juce::Rectangle<float> (15.0f, 10.0f, 600.0f, 26.0f), juce::Justification::centredLeft, false);
-        g.setColour (pal.textDim);
-        g.setFont (Fonts::regular (13.0f));
-        g.drawText ("Drag points  /  Shift: lock level  /  Ctrl or Cmd: lock position or fine bend  /  Double-click: add or delete  /  "
-                    "Double-click a square: straighten",
-                    juce::Rectangle<float> (15.0f, 464.0f, 770.0f, 22.0f), juce::Justification::centredLeft, true);
-    }
-    void resized() override
-    {
-        curve.setBounds (15, 45, 770, 410);
-        reset.setBounds (685, 12, 100, 23);
-    }
-
-private:
-    ShaperProcessor& proc;
-    CurveEditor curve;
-    juce::TextButton reset { "RESET ALL" };
-};
-
-class CurveWindow : public juce::DocumentWindow
-{
-public:
-    CurveWindow (ShaperProcessor& p, juce::LookAndFeel& lnf)
-        : DocumentWindow ("Illuminize Shaper - Curve Editor", paletteForTheme (p).surface, DocumentWindow::closeButton)
-    {
-        setLookAndFeel (&lnf);
-        setUsingNativeTitleBar (true);
-        setContentOwned (new CurveWindowContent (p), true);
-        setResizable (false, false);
-        centreWithSize (getWidth(), getHeight());
-    }
-    ~CurveWindow() override { setLookAndFeel (nullptr); }
-    void closeButtonPressed() override { setVisible (false); }
-
-private:
-    static const Palette& paletteForTheme (ShaperProcessor& p) { return Themes::get (p.getTheme()); }
-};
-
-// ---------------------------------------------------------------- main panel
+    // Base coordinates (scaled as a whole when the window is resized).
+    constexpr int margin = 24, right = MainPanel::baseWidth - margin;  // 24 .. 736
+    constexpr int headerCentre = 30;                                   // header row centre line
+    constexpr int mainTop = 64, mainBottom = 432;                       // curve + AUDIO FORM
+    constexpr int curveRight = 504, formLeft = 520;
+    constexpr int ruleY = 446;                                          // horizontal divider
+    constexpr int labelY = 452, knobY = 476, knobW = 96, knobH = 104;   // section labels, knobs
+    constexpr int rowY = 594, rowH = 26;                                // toggles / menus / meter row
+    constexpr int splitX = 516;                                         // vertical divider
+    constexpr int limLeft = 532;
+} // namespace Layout
 
 MainPanel::MainPanel (ShaperProcessor& p) : proc (p), curve (p), form (p)
 {
     auto& params = proc.getApvts();
-    for (auto* c : std::initializer_list<juce::Component*> { &editButton, &randomButton, &resetButton, &themeBox, &oversamplingBox,
-                                                            &curve, &form, &pre, &bias, &mix, &post, &ceiling, &release, &dc,
-                                                            &autoGain, &limiter, &grMeter })
+    for (auto* c : std::initializer_list<juce::Component*> { &randomButton, &resetButton, &themeBox, &oversamplingBox, &curve, &form,
+                                                            &pre, &bias, &mix, &post, &ceiling, &release, &dc, &autoGain,
+                                                            &limiter, &grMeter })
         addAndMakeVisible (c);
 
     auto attach = [&] (Knob& k, const char* id, double resetValue)
@@ -90,16 +45,11 @@ MainPanel::MainPanel (ShaperProcessor& p) : proc (p), curve (p), form (p)
 
     themeBox.addItemList (Themes::names(), 1);
     themeBox.setSelectedId (proc.getTheme() + 1, juce::dontSendNotification);
-    themeBox.onChange = [this]
-    {
-        proc.setTheme (themeBox.getSelectedId() - 1);
-    };
+    themeBox.onChange = [this] { proc.setTheme (themeBox.getSelectedId() - 1); };
 
-    editButton.onClick = [this] { if (onEditCurve) onEditCurve(); };
     randomButton.onClick = [this] { proc.randomCurve(); };
     resetButton.onClick = [this] { proc.resetAll(); };
 
-    // Info texts (shown as tooltips, like Live's Info View for the device).
     pre.setTooltip ("Pre: gain into the curve. More Pre pushes the signal further along the curve for more distortion.");
     bias.setTooltip ("Bias: shifts the signal off-centre before the curve so the top and bottom distort differently, adding "
                      "warmer even harmonics. The DC filter turns on automatically while Bias is not 0.");
@@ -115,10 +65,10 @@ MainPanel::MainPanel (ShaperProcessor& p) : proc (p), curve (p), form (p)
     ceiling.setTooltip ("Ceiling: highest peak level the limiter lets through.");
     release.setTooltip ("Release: how quickly the limiter recovers. Shorter is louder but can distort low end; longer is smoother.");
     grMeter.setTooltip ("Gain reduction: how much the limiter is turning the signal down.");
-    editButton.setTooltip ("Opens a large window for detailed curve editing.");
     randomButton.setTooltip ("Creates a new random curve that follows the SYM setting. Use Undo to go back.");
     resetButton.setTooltip ("Returns the curve and all controls to their defaults. The theme is kept.");
-    themeBox.setTooltip ("Theme: Live Light and Live Dark match Ableton's themes; Neon themes recolour the whole panel.");
+    themeBox.setTooltip ("Theme: Live Light and Live Dark match Ableton's themes; Neon themes recolour the whole panel. "
+                         "Drag the window edge to make the plugin bigger.");
 }
 
 MainPanel::~MainPanel() = default;
@@ -132,43 +82,54 @@ void MainPanel::applyTheme (int theme)
 
 void MainPanel::resized()
 {
-    // Coordinates from the aligned Max for Live layout (v0.18.4).
-    editButton.setBounds (186, 5, 80, 20);
-    randomButton.setBounds (282, 5, 66, 20);
-    resetButton.setBounds (362, 5, 74, 20);
-    themeBox.setBounds (550, 6, 86, 20);
-    curve.setBounds (8, 29, 268, 138);
-    form.setBounds (282, 29, 66, 138);
-    pre.setBounds (362, 54, 42, 56);
-    bias.setBounds (406, 54, 42, 56);
-    mix.setBounds (450, 54, 42, 56);
-    post.setBounds (494, 54, 42, 56);
-    dc.setBounds (362, 120, 84, 20);
-    autoGain.setBounds (450, 120, 88, 20);
-    oversamplingBox.setBounds (443, 147, 45, 20);
-    limiter.setBounds (550, 30, 90, 20);
-    ceiling.setBounds (550, 54, 42, 56);
-    release.setBounds (594, 54, 42, 56);
-    grMeter.setBounds (546, 121, 94, 44);
+    using namespace Layout;
+    const int buttonH = 28, buttonY = headerCentre - buttonH / 2;
+    themeBox.setBounds (right - 116, buttonY, 116, buttonH);
+    resetButton.setBounds (themeBox.getX() - 12 - 108, buttonY, 108, buttonH);
+    randomButton.setBounds (resetButton.getX() - 12 - 96, buttonY, 96, buttonH);
+
+    curve.setBounds (margin, mainTop, curveRight - margin, mainBottom - mainTop);
+    form.setBounds (formLeft, mainTop, right - formLeft, mainBottom - mainTop);
+
+    // Gain section: four knobs spread across the curve's width.
+    const int gap = (curveRight - margin - 4 * knobW) / 3;
+    Knob* gainKnobs[] = { &pre, &bias, &mix, &post };
+    for (int i = 0; i < 4; ++i)
+        gainKnobs[i]->setBounds (margin + i * (knobW + gap), knobY, knobW, knobH);
+
+    // Bottom row of the gain section: toggles under Pre / Bias, oversampling under Mix / Post.
+    dc.setBounds (pre.getX(), rowY, knobW + gap, rowH);
+    autoGain.setBounds (bias.getX(), rowY, knobW + gap, rowH);
+    oversamplingBox.setBounds (post.getX(), rowY, knobW, rowH);
+
+    // Limiter section.
+    limiter.setBounds (limLeft, labelY, 140, 22);  // 22 high: same small switch as the device
+    const int limGap = (right - limLeft - 2 * knobW);
+    ceiling.setBounds (limLeft, knobY, knobW, knobH);
+    release.setBounds (limLeft + knobW + limGap, knobY, knobW, knobH);
+    grMeter.setBounds (limLeft, rowY - 14, right - limLeft, 46);
 }
 
 void MainPanel::paint (juce::Graphics& g)
 {
+    using namespace Layout;
     const auto& pal = paletteFor (*this);
     g.fillAll (pal.surface);
 
     g.setColour (pal.text);
-    g.setFont (Fonts::bold (19.5f));
-    g.drawText ("ILLUMINIZE  /  SHAPER", juce::Rectangle<float> (14.0f, 3.0f, 172.0f, 24.0f), juce::Justification::centredLeft, false);
+    g.setFont (Fonts::bold (30.0f));
+    g.drawText ("ILLUMINIZE  /  SHAPER", juce::Rectangle<float> ((float) margin, (float) headerCentre - 18.0f, 380.0f, 36.0f),
+                juce::Justification::centredLeft, false);
 
-    g.setFont (Fonts::regular (13.0f));
-    g.drawText ("Theme", juce::Rectangle<float> (486.0f, 6.0f, 56.0f, 20.0f), juce::Justification::centredRight, false);
-    g.drawText ("GAIN / MIX", juce::Rectangle<float> (366.0f, 31.0f, 130.0f, 16.0f), juce::Justification::centredLeft, false);
-    g.drawText ("Oversampling", juce::Rectangle<float> (366.0f, 147.0f, 76.0f, 20.0f), juce::Justification::centredLeft, false);
+    g.setFont (Fonts::medium (14.0f));
+    g.drawText ("GAIN / MIX", juce::Rectangle<float> ((float) margin, (float) labelY, 200.0f, 22.0f), juce::Justification::centredLeft, false);
+    g.setFont (Fonts::regular (14.5f));
+    g.drawText ("Oversampling", juce::Rectangle<float> ((float) mix.getX(), (float) rowY, (float) (post.getX() - mix.getX() - 8), (float) rowH),
+                juce::Justification::centredLeft, false);
 
     g.setColour (pal.divider);
-    g.fillRect (354.0f, 34.0f, 1.0f, 128.0f);
-    g.fillRect (542.0f, 34.0f, 1.0f, 128.0f);
+    g.fillRect ((float) margin, (float) ruleY, (float) (right - margin), 1.0f);
+    g.fillRect ((float) splitX, (float) ruleY + 10.0f, 1.0f, (float) (baseHeight - ruleY - 22));
 }
 
 // ---------------------------------------------------------------- editor
@@ -177,12 +138,12 @@ ShaperEditor::ShaperEditor (ShaperProcessor& p) : AudioProcessorEditor (&p), pro
 {
     setLookAndFeel (&lookAndFeel);
     addAndMakeVisible (panel);
-    panel.onEditCurve = [this] { openCurveWindow(); };
     proc.addChangeListener (this);
     changeListenerCallback (nullptr);
 
-    setResizable (true, false); // the host window resizes; no grip drawn over the panel
-    setResizeLimits (MainPanel::baseWidth, MainPanel::baseHeight, (int) (MainPanel::baseWidth * 2.5), (int) (MainPanel::baseHeight * 2.5));
+    setResizable (true, false); // the host window resizes; keeps the aspect ratio
+    setResizeLimits ((int) (MainPanel::baseWidth * 0.7), (int) (MainPanel::baseHeight * 0.7),
+                     MainPanel::baseWidth * 2, MainPanel::baseHeight * 2);
     getConstrainer()->setFixedAspectRatio ((double) MainPanel::baseWidth / MainPanel::baseHeight);
     setSize (MainPanel::baseWidth, MainPanel::baseHeight);
     startTimerHz (20);
@@ -191,7 +152,6 @@ ShaperEditor::ShaperEditor (ShaperProcessor& p) : AudioProcessorEditor (&p), pro
 ShaperEditor::~ShaperEditor()
 {
     proc.removeChangeListener (this);
-    curveWindow.reset();
     setLookAndFeel (nullptr);
 }
 
@@ -218,20 +178,7 @@ void ShaperEditor::changeListenerCallback (juce::ChangeBroadcaster*)
     lookAndFeel.setTheme (theme);
     panel.applyTheme (theme);
     sendLookAndFeelChange();
-    if (curveWindow != nullptr)
-    {
-        curveWindow->setBackgroundColour (lookAndFeel.palette().surface);
-        curveWindow->sendLookAndFeelChange();
-    }
     repaint();
-}
-
-void ShaperEditor::openCurveWindow()
-{
-    if (curveWindow == nullptr)
-        curveWindow = std::make_unique<CurveWindow> (proc, lookAndFeel);
-    curveWindow->setVisible (true);
-    curveWindow->toFront (true);
 }
 
 } // namespace illuminize

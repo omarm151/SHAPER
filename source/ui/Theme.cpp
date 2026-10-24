@@ -241,7 +241,10 @@ void ShaperLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& b
     }
 }
 
-juce::Font ShaperLookAndFeel::getTextButtonFont (juce::TextButton&, int) { return Fonts::bold (11.5f); }
+juce::Font ShaperLookAndFeel::getTextButtonFont (juce::TextButton&, int height)
+{
+    return Fonts::bold (juce::jlimit (11.5f, 14.0f, (float) height * 0.46f));
+}
 
 void ShaperLookAndFeel::drawButtonText (juce::Graphics& g, juce::TextButton& b, bool, bool down)
 {
@@ -255,14 +258,15 @@ void ShaperLookAndFeel::drawToggleButton (juce::Graphics& g, juce::ToggleButton&
 {
     // Small square switch at the left, label to its right (like Live's toggles).
     const auto& p = palette();
-    const float box = 12.0f, y = (float) b.getHeight() * 0.5f - box * 0.5f;
+    const float h = (float) b.getHeight();
+    const float box = h >= 24.0f ? 14.0f : 12.0f, y = h * 0.5f - box * 0.5f;
     juce::Rectangle<float> r (0.5f, y, box, box);
     g.setColour (b.getToggleState() ? p.toggleOn : (over ? p.toggleOff.brighter (0.05f) : p.toggleOff));
     g.fillRect (r);
     g.setColour (p.toggleOutline);
     g.drawRect (r, 1.0f);
     g.setColour (p.text);
-    g.setFont (Fonts::regular (13.0f));
+    g.setFont (Fonts::regular (h >= 24.0f ? 14.5f : 13.0f));
     g.drawText (b.getButtonText(), juce::Rectangle<float> (box + 8.0f, 0.0f, (float) b.getWidth() - box - 8.0f, (float) b.getHeight()),
                 juce::Justification::centredLeft, false);
 }
@@ -282,7 +286,10 @@ void ShaperLookAndFeel::drawComboBox (juce::Graphics& g, int width, int height, 
     g.fillPath (tri);
 }
 
-juce::Font ShaperLookAndFeel::getComboBoxFont (juce::ComboBox&) { return Fonts::regular (13.0f); }
+juce::Font ShaperLookAndFeel::getComboBoxFont (juce::ComboBox& box)
+{
+    return Fonts::regular (box.getHeight() >= 24 ? 14.5f : 13.0f);
+}
 
 void ShaperLookAndFeel::positionComboBoxText (juce::ComboBox& box, juce::Label& label)
 {

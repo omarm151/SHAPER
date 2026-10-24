@@ -11,9 +11,7 @@
 namespace illuminize
 {
 
-class CurveWindow;
-
-// The device panel, laid out at the Max for Live device's 644 x 170 coordinates.
+// The plugin panel: a large, near-square layout (not limited to Live's device strip).
 class MainPanel : public juce::Component
 {
 public:
@@ -23,9 +21,8 @@ public:
     void resized() override;
     void applyTheme (int theme);
 
-    static constexpr int baseWidth = 644, baseHeight = 170;
+    static constexpr int baseWidth = 760, baseHeight = 648;
 
-    std::function<void()> onEditCurve;
     GainReductionMeter grMeter;
 
 private:
@@ -34,7 +31,7 @@ private:
     using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
 
     ShaperProcessor& proc;
-    juce::TextButton editButton { "EDIT CURVE" }, randomButton { "RANDOM" }, resetButton { "RESET ALL" };
+    juce::TextButton randomButton { "RANDOM" }, resetButton { "RESET ALL" };
     juce::ComboBox themeBox, oversamplingBox;
     CurveEditor curve;
     AudioForm form;
@@ -59,13 +56,11 @@ public:
 private:
     void timerCallback() override;
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
-    void openCurveWindow();
 
     ShaperProcessor& proc;
     ShaperLookAndFeel lookAndFeel;
     MainPanel panel;
     juce::TooltipWindow tooltips { this, 700 };
-    std::unique_ptr<CurveWindow> curveWindow;
     int currentTheme = -1;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ShaperEditor)

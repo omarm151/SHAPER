@@ -2,6 +2,7 @@
 // Usage: UiSnapshot <output-folder>
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "PluginEditor.h"
 #include "PluginProcessor.h"
 #include "ui/CurveEditor.h"
 #include "ui/Theme.h"
@@ -52,18 +53,17 @@ int main (int argc, char** argv)
     {
         proc.setTheme (theme);
         std::unique_ptr<juce::AudioProcessorEditor> editor (proc.createEditor());
-        editor->setSize (644 * 2, 170 * 2);
+        editor->setSize (MainPanel::baseWidth, MainPanel::baseHeight);
         auto img = editor->createComponentSnapshot (editor->getLocalBounds(), true, 1.0f);
         save (img, outDir.getChildFile ("panel_" + Themes::names()[theme].replaceCharacter (' ', '_') + ".png"));
     }
 
-    // Big curve editor (EDIT CURVE window) in the default theme.
+    // Largest window size (2x) in the default theme.
     proc.setTheme (Themes::liveLight);
-    ShaperLookAndFeel lnf;
-    CurveEditor big (proc);
-    big.setLookAndFeel (&lnf);
-    big.setSize (770, 410);
-    save (big.createComponentSnapshot (big.getLocalBounds(), true, 1.0f), outDir.getChildFile ("curve_editor_large.png"));
-    big.setLookAndFeel (nullptr);
+    {
+        std::unique_ptr<juce::AudioProcessorEditor> editor (proc.createEditor());
+        editor->setSize (MainPanel::baseWidth * 2, MainPanel::baseHeight * 2);
+        save (editor->createComponentSnapshot (editor->getLocalBounds(), true, 1.0f), outDir.getChildFile ("panel_2x.png"));
+    }
     return 0;
 }
