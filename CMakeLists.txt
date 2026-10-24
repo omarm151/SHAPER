@@ -121,7 +121,7 @@ if(ILLUMINIZE_DEV_TOOLS)
     target_compile_definitions(UiSnapshot PRIVATE $<TARGET_PROPERTY:IlluminizeShaper,COMPILE_DEFINITIONS>)
     target_link_libraries(UiSnapshot PRIVATE IlluminizeShaper)
 
-    juce_add_console_app(HostCheck PRODUCT_NAME "HostCheck")
+    juce_add_console_app(HostCheck PRODUCT_NAME "HostCheck" PLUGINHOST_AU TRUE)
     target_sources(HostCheck PRIVATE tools/HostCheck.cpp)
     target_compile_definitions(HostCheck PRIVATE JUCE_PLUGINHOST_VST3=1 JUCE_PLUGINHOST_AU=1
         JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
@@ -130,4 +130,8 @@ if(ILLUMINIZE_DEV_TOOLS)
             JUCE_USE_XRANDR=0 JUCE_USE_XINERAMA=0 JUCE_USE_XCURSOR=0 JUCE_USE_XINPUT=0 JUCE_ALSA=0 JUCE_JACK=0)
     endif()
     target_link_libraries(HostCheck PRIVATE juce::juce_audio_processors juce::juce_recommended_config_flags)
+    if(APPLE)
+        # Audio Unit hosting needs CoreAudioKit (AUGenericView).
+        target_link_libraries(HostCheck PRIVATE "-framework CoreAudioKit" "-framework AudioUnit")
+    endif()
 endif()
